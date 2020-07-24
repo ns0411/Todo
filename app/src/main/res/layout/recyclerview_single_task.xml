@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:layout_margin="10dp"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:elevation="4dp"
+    android:elevation="10dp"
     app:cardCornerRadius="8dp"
     android:id="@+id/llContent">
     
@@ -12,7 +12,9 @@
         android:id="@+id/textViewTask"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/new_task" />
+        android:text="@string/new_task"
+        android:padding="10dp"
+        android:textSize="20sp"/>
 
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/deleteTaskBtn"
@@ -20,6 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_marginLeft="320dp"
         android:src="@drawable/ic_bin"
+        android:padding="1dp"
         />
 
 </com.google.android.material.card.MaterialCardView>

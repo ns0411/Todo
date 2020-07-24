@@ -1,24 +1,23 @@
 package com.example.todo.activity
 
 import android.content.Context
-import android.content.DialogInterface
 import android.os.AsyncTask
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
+import android.view.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
 import com.example.todo.R
 import com.example.todo.adapter.TaskAdapter
+import com.example.todo.database.DBAsyncTask
 import com.example.todo.database.TaskDatabase
 import com.example.todo.database.TaskEntity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.android.synthetic.main.add_new_task_dialog.*
 import kotlinx.android.synthetic.main.add_new_task_dialog.view.*
 
 class MainActivity : AppCompatActivity() {
@@ -39,21 +38,28 @@ class MainActivity : AppCompatActivity() {
 
         layoutManager = LinearLayoutManager(this)
         recyclerViewSingleTask = findViewById(R.id.taskLayout)
- 
 
-        dbTaskList = RetrieveTasks(this).execute().get() as ArrayList<TaskEntity>
-
-
-
-        taskAdapter = TaskAdapter(this, dbTaskList.reversed())
-        recyclerViewSingleTask.adapter = taskAdapter
-        recyclerViewSingleTask.layoutManager = layoutManager
-        ItemTouchHelper(itemTouchHelper).attachToRecyclerView(recyclerViewSingleTask)
+        init()
 
         floatingButtonAdd=findViewById(R.id.floating_action_button)
         floatingButtonAdd.setOnClickListener(View.OnClickListener {
             openDialog()
         })
+
+    }
+    private fun init() {
+        dbTaskList = RetrieveTasks(this).execute().get() as ArrayList<TaskEntity>
+        taskAdapter = TaskAdapter(this, dbTaskList,object : TaskAdapter.OnItemClickListener {
+            override fun onDeleteClick(taskId:Int) {
+                init()
+            }
+
+            override fun onUpdate(taskId: Int) {
+                init()
+            }
+        })
+        recyclerViewSingleTask.adapter = taskAdapter
+        recyclerViewSingleTask.layoutManager = layoutManager
 
     }
 
@@ -65,12 +71,13 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(getString(R.string.add)) { dialog, _: Int ->
 
                 val taskEntity=TaskEntity(view.textFieldNewTask.text.toString(),0)
-                val result=MainActivity.DBAsynTask(this,taskEntity,2).execute().get()
+                val result= DBAsyncTask(this, taskEntity, 2).execute().get()
                 if(result)
                 {
                     Toast.makeText(this,"Task Added",Toast.LENGTH_LONG).show()
                     taskAdapter.notifyDataSetChanged()
                     dialog.dismiss()
+                    init()
 
                 }
                 else
@@ -87,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         dialogBuilder.show()
     }
 
+
     class RetrieveTasks(val context: Context) : AsyncTask<Void, Void, List<TaskEntity>>() {
         override fun doInBackground(vararg params: Void?): List<TaskEntity> {
             val db = Room.databaseBuilder(context, TaskDatabase::class.java, "asks012-db").build()
@@ -96,41 +104,27 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
 
-    val itemTouchHelper=object: ItemTouchHelper.SimpleCallback(0,ItemTouchHelper.LEFT)
-    {
-        override fun onMove(
-            recyclerView: RecyclerView,
-            viewHolder: RecyclerView.ViewHolder,
-            target: RecyclerView.ViewHolder
-        ): Boolean {
-            return false
-        }
+        val inflater:MenuInflater=menuInflater
+        inflater.inflate(R.menu.toolbar_menu,menu)
 
-        override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int){
-            dbTaskList.removeAt(viewHolder.adapterPosition)
-            taskAdapter.notifyItemRemoved(viewHolder.adapterPosition)
-        }
-    }
+        val searchItem : MenuItem? = menu?.findItem(R.id.action_search)
+       val searchView: SearchView= searchItem?.actionView as SearchView
 
-
-    class DBAsynTask(val context: Context, val taskEntity: TaskEntity, val mode: Int) : AsyncTask<Void, Void, Boolean>() {
-
-        val db= Room.databaseBuilder(context, TaskDatabase::class.java, "asks012-db").build()
-
-        override fun doInBackground(vararg p0: Void?): Boolean {
-
-            when (mode) {
-
-                2 -> {
-                    db.taskDao().insertTask(taskEntity)
-                    db.close()
-                    return true
-                }
-
-                else->return false
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
             }
-        }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                taskAdapter.filter.filter(newText)
+                return false
+            }
+
+        })
+        return true
     }
+
 
 }

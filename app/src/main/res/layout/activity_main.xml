@@ -9,10 +9,13 @@
     tools:context=".activity.MainActivity"
     style="@style/RoundShapeTheme">
 
+
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/taskLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent" />
+
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/floating_action_button"
