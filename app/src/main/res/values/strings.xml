@@ -5,4 +5,6 @@
     <string name="add">Add</string>
     <string name="set_reminder">Set Reminder</string>
     <string name="new_task">Task..</string>
+    <string name="search">search</string>
+    <string name="task">new task</string>
 </resources>
