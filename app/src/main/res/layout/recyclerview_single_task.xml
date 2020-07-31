@@ -7,14 +7,41 @@
     android:elevation="10dp"
     app:cardCornerRadius="8dp"
     android:id="@+id/llContent">
-    
+
+
+
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/checkboxComplete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        android:padding="10dp" />
+
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/textViewTask"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/new_task"
+        android:layout_marginStart="35dp"
         android:padding="10dp"
-        android:textSize="20sp"/>
+        android:textSize="18sp"/>
 
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/dateAndTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Date and Time"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="40dp"
+        android:padding="10dp"
+        android:textSize="12sp"/>
+
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/checkboxSelectDelete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="310dp"
+        android:padding="10dp" />
 
 </com.google.android.material.card.MaterialCardView>
