@@ -7,9 +7,7 @@
     android:layout_height="match_parent"
     android:id="@+id/root_layout"
     tools:context=".activity.MainActivity"
-    style="@style/RoundShapeTheme">
-
-
+    android:background="@color/colorPrimary">
 
 
     <RelativeLayout
@@ -27,16 +25,30 @@
                 android:layout_height="?attr/actionBarSize"
                 app:title="@string/app_name"
                 app:menu="@menu/toolbar_menu"
-                style="@style/Widget.MaterialComponents.Toolbar.Primary"
-                />
+                android:background="@color/colorPrimary"
+                style="@style/Widget.MaterialComponents.Toolbar.Primary" />
+
         </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/taskLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="15dp"
         android:layout_below="@id/toolbar_layout"/>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/noTasks"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/notask"
+                android:visibility="invisible" />
+
+        </RelativeLayout>
 
 </RelativeLayout>
 
@@ -47,6 +59,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|right"
         android:layout_margin="16dp"
+        android:backgroundTint="@color/colorAccent"
         app:srcCompat="@drawable/ic_action_plus" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

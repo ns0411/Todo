@@ -1,6 +1,10 @@
 package com.example.todo.activity
 
+import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -14,6 +18,7 @@ import android.widget.TimePicker
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -23,59 +28,78 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import androidx.room.Room
 import com.example.todo.R
 import com.example.todo.adapter.TaskAdapter
+import com.example.todo.broadcastReciever.NotificationBroadcastReceiver
 import com.example.todo.database.DBAsyncTask
 import com.example.todo.database.TaskDatabase
 import com.example.todo.database.TaskEntity
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.imageview.ShapeableImageView
 import kotlinx.android.synthetic.main.add_new_task_dialog.view.*
 import java.util.*
-import kotlin.collections.ArrayList
 
 
 class MainActivity : AppCompatActivity(), View.OnLongClickListener {
 
     private lateinit var toolbar: MaterialToolbar
     private lateinit var floatingButtonAdd: FloatingActionButton
-    lateinit var taskAdapter: TaskAdapter
+    private lateinit var taskAdapter: TaskAdapter
     private lateinit var layoutManager: RecyclerView.LayoutManager
     private lateinit var recyclerViewSingleTask: RecyclerView
     private lateinit var deleteIcon: Drawable
+    private lateinit var noTaskAdded: ShapeableImageView
     private var swipeBackgroundColor: ColorDrawable= ColorDrawable(Color.parseColor("#FF0000"))
     private var date=0
     private var month=0
     private var year=0
     private var hour=0
     private var minute=0
+    private var counter=0
+    private lateinit var actionMode:ActionMode
 
-     var isContextModeEnabled=false
+    var isContextModeEnabled=false
 
     private var dbTaskList = arrayListOf<TaskEntity>()
+    private var selectedItemsList= arrayListOf<TaskEntity>()
 
+    @SuppressLint("ResourceAsColor")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        noTaskAdded=findViewById(R.id.noTasks)
 
         toolbar=findViewById(R.id.topAppBar)
         setSupportActionBar(toolbar)
 
-        deleteIcon=ContextCompat.getDrawable(this,R.drawable.ic_bin)!!
+        deleteIcon=ContextCompat.getDrawable(this,R.drawable.ic_bin_sweep)!!
         layoutManager = LinearLayoutManager(this)
         recyclerViewSingleTask = findViewById(R.id.taskLayout)
 
         init()
 
         floatingButtonAdd=findViewById(R.id.floating_action_button)
+
         floatingButtonAdd.setOnClickListener {
             openDialog()
         }
-
     }
 
     private fun init() {
         dbTaskList = RetrieveTasks(this).execute().get() as ArrayList<TaskEntity>
+
+        if(dbTaskList.isEmpty())
+        {
+            noTaskAdded.visibility=View.VISIBLE
+        }
+        else
+        {
+            noTaskAdded.visibility=View.INVISIBLE
+        }
+
+
         taskAdapter = TaskAdapter(this, dbTaskList,object : TaskAdapter.OnItemClickListener {
             override fun onDeleteClick(taskId:Int) {
                 init()
@@ -129,8 +153,15 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
             dialogBuilder1.setPositiveButton("Set Reminder"){dialog,_ ->
 
                 dateReminder=date.toString()+"/"+(month+1).toString()+"/"+year.toString()
-                timeReminder= "$hour:$minute"
-                view.setReminderChip.text=dateReminder+"  "+timeReminder
+                timeReminder = if(hour<10 ) {
+                    if(minute<10)
+                        "0$hour:0$minute"
+                    else
+                        "0$hour:$minute"
+                } else
+                    "$hour:$minute"
+
+                view.setReminderChip.text= "$dateReminder  $timeReminder"
                 dialog.dismiss()
             }
 
@@ -149,16 +180,14 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
                 val result= DBAsyncTask(this, taskEntity, 2).execute().get()
                 if(result)
                 {
-                    Toast.makeText(this,"Task Added",Toast.LENGTH_LONG).show()
+                    scheduleNotification(year,month,date,hour,minute,view.textFieldNewTask.text.toString())
                     taskAdapter.notifyDataSetChanged()
                     dialog.dismiss()
                     init()
-
                 }
                 else
                 {
                     Toast.makeText(this,"Error while adding your task",Toast.LENGTH_LONG).show()
-
                 }}
                 taskAdapter.notifyDataSetChanged()
             }
@@ -169,6 +198,29 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
         dialogBuilder.show()
     }
 
+    private fun scheduleNotification(
+        yearS: Int,
+        monthS: Int,
+        dateS: Int,
+        hourS: Int,
+        minuteS: Int,
+        text: String
+    ) {
+
+        val calendar:Calendar= Calendar.getInstance()
+        calendar.timeInMillis = System.currentTimeMillis();
+        calendar.clear();
+        calendar.set(yearS,monthS,dateS,hourS,minuteS);
+
+        val intent =Intent(this,NotificationBroadcastReceiver::class.java)
+            intent.putExtra("content",text)
+
+        val pendingIntent=PendingIntent.getBroadcast(this,0,intent,PendingIntent.FLAG_UPDATE_CURRENT)
+
+        val alarmManager= getSystemService(ALARM_SERVICE) as AlarmManager
+        alarmManager.set(AlarmManager.RTC_WAKEUP,calendar.timeInMillis,pendingIntent)
+    }
+
 
     class RetrieveTasks(private val context: Context) : AsyncTask<Void, Void, List<TaskEntity>>() {
         override fun doInBackground(vararg params: Void?): List<TaskEntity> {
@@ -177,7 +229,6 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
             return db.taskDao().getAllTasks()
         }
     }
-
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
 
@@ -198,8 +249,10 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
             }
 
         })
+
         return true
     }
+
 
     private var itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
             override fun onMove(
@@ -211,6 +264,7 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
 
             override fun onSwiped(viewHolder: ViewHolder, direction: Int) {
                 val taskEntity=viewHolder.itemView.tag
+
                 val result = DBAsyncTask(applicationContext, taskEntity as TaskEntity, 3).execute().get()
                 if (result) {
 
@@ -220,6 +274,8 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
                 } else {
                     Toast.makeText(applicationContext, "Some error occurred", Toast.LENGTH_SHORT).show()
                 }
+
+
             }
 
         override fun onChildDraw(
@@ -253,11 +309,94 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
         }
         })
 
-    override fun onLongClick(v: View?): Boolean {
-        isContextModeEnabled=true
+     private val callback = object : ActionMode.Callback {
 
+        override fun onActionItemClicked(
+            mode: ActionMode?,
+            item: MenuItem?
+        ): Boolean {
+            return when (item?.itemId) {
+                R.id.delete -> {
+                     var counterDelete=0
+                    for(items:TaskEntity in selectedItemsList)
+                  {
+                   if(DBAsyncTask(applicationContext,items,3).execute().get())
+                       counterDelete++
+                  }
+                    if(counterDelete==selectedItemsList.size)
+                    {
+                        counter=0
+                        updateCounter(counter)
+                        mode?.finish()
+                        floatingButtonAdd.visibility=View.VISIBLE
+                    }
+                    init()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        override fun onCreateActionMode(
+            mode: ActionMode?,
+            menu: Menu?
+        ): Boolean {
+            menuInflater.inflate(R.menu.toolbar_menu_action_mode, menu)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode?, menu: Menu?): Boolean {
+            return false
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode?) {
+            isContextModeEnabled=false
+            taskAdapter.notifyDataSetChanged()
+            counter=0
+            selectedItemsList.clear()
+            floatingButtonAdd.visibility=View.VISIBLE
+        }
+    }
+
+
+
+    override fun onLongClick(v: View?): Boolean {
+        floatingButtonAdd.visibility=View.INVISIBLE
+        actionMode = this.startSupportActionMode(callback)!!
+        actionMode.title = "0 Item selected"
+        isContextModeEnabled=true
+        taskAdapter.notifyDataSetChanged()
         return true
     }
 
+    fun prepareItems(v: View, position: Int) {
+
+        if((v as MaterialCheckBox).isChecked)
+        {
+            selectedItemsList.add(dbTaskList[position])
+            counter++
+            updateCounter(counter)
+
+        }
+        else{
+            selectedItemsList.remove(dbTaskList[position])
+            counter--
+            updateCounter(counter)
+        }
+
+    }
+
+    private fun updateCounter(count:Int)
+    {
+        if(count==0)
+        {
+            actionMode.title="O Item Selected"
+        }
+        else
+        {
+            actionMode.title="$count Items Selected"
+        }
+    }
 
 }

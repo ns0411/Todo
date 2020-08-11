@@ -3,7 +3,8 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_gravity="center">
+    android:layout_gravity="center"
+    app:cardBackgroundColor="@color/colorPickerDialog">
 
 <RelativeLayout
     android:id="@+id/relativeLayout"
@@ -15,6 +16,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/date_time"
+        android:textColor="#ffffff"
         android:layout_centerHorizontal="true"/>
 
 
@@ -30,7 +32,8 @@
         android:layout_height="wrap_content"
         android:datePickerMode="spinner"
         android:calendarViewShown="false"
-        android:layout_gravity="center_horizontal"/>
+        android:layout_gravity="center_horizontal"
+        />
 
     <TimePicker
         android:id="@+id/timePicker"
@@ -38,7 +41,8 @@
         android:layout_height="wrap_content"
         android:timePickerMode="spinner"
         android:layout_marginTop="1dp"
-        android:layout_gravity="center_horizontal"/>
+        android:layout_gravity="center_horizontal"
+        />
 
     </LinearLayout>
 </RelativeLayout>

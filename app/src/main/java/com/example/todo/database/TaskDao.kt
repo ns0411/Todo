@@ -12,11 +12,12 @@ interface TaskDao {
     @Delete
     fun deleteTask(taskEntity: TaskEntity)
 
+    @Update
+    fun updateTask(taskEntity: TaskEntity)
+
     @Query("SELECT * FROM tasks")
     fun getAllTasks():List<TaskEntity>
 
-    @Update
-    fun updateTask(taskEntity: TaskEntity)
 
     companion object {
     @Volatile

@@ -1,6 +1,8 @@
 package com.example.todo.adapter
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.os.Build
 import android.text.SpannableString
 import android.text.style.StrikethroughSpan
@@ -11,6 +13,7 @@ import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todo.R
+import com.example.todo.R.*
 import com.example.todo.activity.MainActivity
 import com.example.todo.database.DBAsyncTask
 import com.example.todo.database.TaskEntity
@@ -23,15 +26,15 @@ import kotlinx.android.synthetic.main.recyclerview_single_task.view.*
 import java.util.*
 import kotlin.collections.ArrayList
 
-class TaskAdapter(private val context: Context, val taskContentList:ArrayList<TaskEntity>, private val listener: OnItemClickListener) :RecyclerView.Adapter<TaskAdapter.ViewHolderTask>(),Filterable
-{
+class TaskAdapter(private val context: Context, val taskContentList:ArrayList<TaskEntity>, private val listener: OnItemClickListener) :RecyclerView.Adapter<TaskAdapter.ViewHolderTask>(),Filterable,
+    View.OnClickListener {
 
     private var date=0
     private var month=0
     private var year=0
     private var hour=0
     private var minute=0
-    private var mainActivity:MainActivity=MainActivity()
+    private var mainActivity: MainActivity=this.context as MainActivity
     private lateinit var reminderDate:String
     private lateinit var reminderTime:String
 
@@ -43,16 +46,15 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
 
     class ViewHolderTask(view: View): RecyclerView.ViewHolder(view) {
-
-        val textTask: MaterialTextView =view.findViewById(R.id.textViewTask)
-        val dateAndTime: MaterialTextView=view.findViewById(R.id.dateAndTime)
-        val selectDeleteCheckBox: MaterialCheckBox=view.findViewById(R.id.checkboxSelectDelete)
-        val llContent: MaterialCardView =view.findViewById(R.id.llContent)
+        val textTask: MaterialTextView =view.findViewById(id.textViewTask)
+        val dateAndTime: MaterialTextView=view.findViewById(id.dateAndTime)
+        val selectDeleteCheckBox: MaterialCheckBox=view.findViewById(id.checkboxSelectDelete)
+        val llContent: MaterialCardView =view.findViewById(id.llContent)
 
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolderTask {
-        val view= LayoutInflater.from(parent.context).inflate(R.layout.recyclerview_single_task,parent,false)
+        val view= LayoutInflater.from(parent.context).inflate(layout.recyclerview_single_task,parent,false)
         return ViewHolderTask(view)
     }
 
@@ -65,16 +67,22 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
         fun onUpdate(taskId:Int)
     }
 
+
+    @SuppressLint("ResourceAsColor")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onBindViewHolder(holder: ViewHolderTask, position: Int) {
         val taskItemObject=filteredTaskList[filteredTaskList.size-position-1]
         val id=taskItemObject.taskId
 
+        reminderDate=""
+        reminderTime=""
         if(!taskItemObject.isCompleted)
         {
 
             holder.textTask.text=taskItemObject.taskContent
             holder.llContent.checkboxComplete.isChecked=false
+            holder.llContent.isLongClickable=true
+            holder.llContent.setCardBackgroundColor(Color.WHITE)
         }
         if(taskItemObject.isCompleted)
         {
@@ -83,13 +91,15 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
             holder.textTask.text = spannableString
             holder.llContent.checkboxComplete.isChecked=true
             holder.dateAndTime.text="Task completed"
-            holder.llContent.isClickable=false
+            holder.llContent.isEnabled=false
+            holder.llContent.isLongClickable=true
+            holder.llContent.setCardBackgroundColor(Color.GRAY)
         }
 
         if(taskItemObject.date.isEmpty() && taskItemObject.timeReminder.isEmpty())
         {
                 if (!taskItemObject.isCompleted)
-                    holder.dateAndTime.text = "No reminder set"
+                    holder.dateAndTime.text = "Set Reminder"
                 else
                     holder.dateAndTime.text = "Task Completed"
         }
@@ -97,6 +107,7 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
             holder.dateAndTime.text=taskItemObject.date+" "+taskItemObject.timeReminder
 
         holder.llContent.setOnLongClickListener(mainActivity)
+
         if(!mainActivity.isContextModeEnabled)
         {
             holder.selectDeleteCheckBox.visibility=View.GONE
@@ -105,21 +116,29 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
             holder.selectDeleteCheckBox.isChecked=false
         }
 
+        holder.llContent.checkboxSelectDelete.tag=position
+        holder.llContent.checkboxSelectDelete.setOnClickListener(this)
 
         holder.llContent.setOnClickListener {
 
-            val view = LayoutInflater.from(context).inflate(R.layout.add_new_task_dialog, null)
+            val view = LayoutInflater.from(context).inflate(layout.add_new_task_dialog, null)
 
-                if(taskItemObject.date.isEmpty() && taskItemObject.timeReminder.isEmpty())
+                if(taskItemObject.date=="" && taskItemObject.timeReminder=="")
                 {
                     view.setReminderChip.text="Set Reminder"
                 }
-                else
-                    view.setReminderChip.text=taskItemObject.date+" "+taskItemObject.timeReminder
+                else {
 
+                    if(reminderDate=="" && reminderTime=="")
+                    view.setReminderChip.text="Set Reminder"
+
+                    else
+                    view.setReminderChip.text = taskItemObject.date + " " + taskItemObject.timeReminder
+                }
             view.setReminderChip.setOnClickListener {
-                val viewPicker = LayoutInflater.from(context).inflate(R.layout.select_date_time_dialog, null)
-                val dialogBuilder1: MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(context,R.style.RoundShapeTheme)
+                val viewPicker = LayoutInflater.from(context).inflate(layout.select_date_time_dialog, null)
+                val dialogBuilder1: MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(context,
+                    style.RoundShapeTheme)
                     .setView(viewPicker)
                 val timePicker:TimePicker=viewPicker.findViewById(R.id.timePicker)
                 timePicker.setIs24HourView(true)
@@ -147,11 +166,11 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
                 dialogBuilder1.setPositiveButton("Set Reminder"){dialog,_ ->
 
-                   reminderDate=date.toString()+"/"+(month+1).toString()+"/"+year.toString()
-                   reminderTime= "$hour:$minute"
+                        reminderDate = date.toString() + "/" + (month + 1).toString() + "/" + year.toString()
+                        reminderTime = "$hour:$minute"
+                        view.setReminderChip.text = "$reminderDate  $reminderTime"
 
 
-                    view.setReminderChip.text=reminderDate+"  "+reminderTime
                     dialog.dismiss()
                 }
                 dialogBuilder1.create()
@@ -160,7 +179,8 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
 
             view.textFieldNewTask.setText(taskItemObject.taskContent)
-            val dialogBuilder: MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(context,R.style.RoundShapeTheme)
+            val dialogBuilder: MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(context,
+                style.RoundShapeTheme)
                 .setView(view)
                 .setPositiveButton("Update") { dialog, _: Int ->
                     if(view.textFieldNewTask.text.toString().isEmpty())
@@ -172,8 +192,9 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
                     val result = DBAsyncTask(context, taskEntity, 4).execute().get()
                     if(result) {
 
-                        Toast.makeText(context, "Task Updated ", Toast.LENGTH_SHORT).show()
                         listener.onUpdate(taskItemObject.taskId)
+                        reminderDate=""
+                        reminderTime=""
                         dialog.dismiss()
 
                     } else {
@@ -190,30 +211,35 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
 
         holder.llContent.checkboxComplete.setOnClickListener {
+
+            reminderTime=""
+            reminderDate=""
             if (holder.llContent.checkboxComplete.isChecked) {
 
-                val taskEntity = TaskEntity(taskItemObject.taskContent, taskItemObject.date,taskItemObject.timeReminder, true, id)
+                val taskEntity = TaskEntity(taskItemObject.taskContent, "","", true, id)
                 if (DBAsyncTask(context, taskEntity, 4).execute().get()) {
                     val spannableString = SpannableString(taskItemObject.taskContent)
                     spannableString.setSpan(StrikethroughSpan(), 0, spannableString.length, 0)
                     holder.textTask.text = spannableString
                     holder.dateAndTime.text="Task completed"
-                    holder.llContent.isClickable=false
+                    holder.llContent.isEnabled=false
+                    holder.llContent.setCardBackgroundColor(Color.GRAY)
+
+
                 }
             } else {
 
-                val taskEntity = TaskEntity(taskItemObject.taskContent, taskItemObject.date,taskItemObject.timeReminder, false, id)
+                val taskEntity = TaskEntity(taskItemObject.taskContent, reminderDate,reminderTime, false, id)
                  if (DBAsyncTask(context, taskEntity, 4).execute().get())
                     holder.textTask.text = taskItemObject.taskContent
-                    holder.dateAndTime.text="Set Reminder Again"
-                    holder.llContent.isClickable=true
+                    holder.dateAndTime.text="Set Reminder"
+                    holder.llContent.isEnabled=true
+                    holder.llContent.setCardBackgroundColor(Color.WHITE)
 
             }
         }
-
-
-
     }
+
 
 
     override fun getFilter(): Filter {
@@ -249,4 +275,10 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
         }
     }
+
+    override fun onClick(v: View?) {
+        val adapterPos:Int= v?.tag as Int
+        mainActivity.prepareItems(v,adapterPos)
+    }
+
 }

@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="350dp"
     android:layout_height="wrap_content"
     android:layout_margin="10dp"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:cardBackgroundColor="@color/colorBackground2"
+    app:cardCornerRadius="15dp"
     android:elevation="10dp"
-    app:cardCornerRadius="8dp"
+    android:layout_centerHorizontal="true"
     android:id="@+id/llContent">
-
 
 
     <com.google.android.material.checkbox.MaterialCheckBox
@@ -24,7 +25,9 @@
         android:text="@string/new_task"
         android:layout_marginStart="35dp"
         android:padding="10dp"
-        android:textSize="18sp"/>
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/colorPrimaryDark"/>
 
 
     <com.google.android.material.textview.MaterialTextView
@@ -35,13 +38,15 @@
         android:layout_marginStart="10dp"
         android:layout_marginTop="40dp"
         android:padding="10dp"
-        android:textSize="12sp"/>
+        android:textSize="12sp"
+        android:textStyle="italic"/>
 
     <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/checkboxSelectDelete"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="310dp"
+        android:layout_marginTop="11dp"
         android:padding="10dp" />
 
 </com.google.android.material.card.MaterialCardView>
