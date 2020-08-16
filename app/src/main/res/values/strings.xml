@@ -6,7 +6,7 @@
     <string name="set_reminder">Set Reminder</string>
     <string name="new_task">Task..</string>
     <string name="search">search</string>
-    <string name="task">new task</string>
+    <string name="task">task</string>
     <string name="date_time">Set Date and Time</string>
     <string name="delete">Delete</string>
 </resources>

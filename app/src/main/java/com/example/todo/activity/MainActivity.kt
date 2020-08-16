@@ -2,6 +2,8 @@ package com.example.todo.activity
 
 import android.annotation.SuppressLint
 import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -50,37 +52,39 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
     private lateinit var recyclerViewSingleTask: RecyclerView
     private lateinit var deleteIcon: Drawable
     private lateinit var noTaskAdded: ShapeableImageView
-    private var swipeBackgroundColor: ColorDrawable= ColorDrawable(Color.parseColor("#FF0000"))
-    private var date=0
-    private var month=0
-    private var year=0
-    private var hour=0
-    private var minute=0
-    private var counter=0
-    private lateinit var actionMode:ActionMode
-
-    var isContextModeEnabled=false
+    private var swipeBackgroundColor: ColorDrawable = ColorDrawable(Color.parseColor("#FF0000"))
+    private var date = 0
+    private var month = 0
+    private var year = 0
+    private var hour = 0
+    private var minute = 0
+    private var counter = 0
+    private lateinit var actionMode: ActionMode
+    private var notText: String = ""
+    var isContextModeEnabled = false
 
     private var dbTaskList = arrayListOf<TaskEntity>()
-    private var selectedItemsList= arrayListOf<TaskEntity>()
+    private var selectedItemsList = arrayListOf<TaskEntity>()
 
     @SuppressLint("ResourceAsColor")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        noTaskAdded=findViewById(R.id.noTasks)
+        createNotificationChannel()
 
-        toolbar=findViewById(R.id.topAppBar)
+        noTaskAdded = findViewById(R.id.noTasks)
+
+        toolbar = findViewById(R.id.topAppBar)
         setSupportActionBar(toolbar)
 
-        deleteIcon=ContextCompat.getDrawable(this,R.drawable.ic_bin_sweep)!!
+        deleteIcon = ContextCompat.getDrawable(this, R.drawable.ic_bin_sweep)!!
         layoutManager = LinearLayoutManager(this)
         recyclerViewSingleTask = findViewById(R.id.taskLayout)
 
         init()
 
-        floatingButtonAdd=findViewById(R.id.floating_action_button)
+        floatingButtonAdd = findViewById(R.id.floating_action_button)
 
         floatingButtonAdd.setOnClickListener {
             openDialog()
@@ -90,18 +94,15 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
     private fun init() {
         dbTaskList = RetrieveTasks(this).execute().get() as ArrayList<TaskEntity>
 
-        if(dbTaskList.isEmpty())
-        {
-            noTaskAdded.visibility=View.VISIBLE
-        }
-        else
-        {
-            noTaskAdded.visibility=View.INVISIBLE
+        if (dbTaskList.isEmpty()) {
+            noTaskAdded.visibility = View.VISIBLE
+        } else {
+            noTaskAdded.visibility = View.INVISIBLE
         }
 
 
-        taskAdapter = TaskAdapter(this, dbTaskList,object : TaskAdapter.OnItemClickListener {
-            override fun onDeleteClick(taskId:Int) {
+        taskAdapter = TaskAdapter(this, dbTaskList, object : TaskAdapter.OnItemClickListener {
+            override fun onDeleteClick(taskId: Int) {
                 init()
             }
 
@@ -115,116 +116,147 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun openDialog()
-    {
-        var dateReminder=""
-        var timeReminder=""
-        val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.add_new_task_dialog, null)
-        val dialogBuilder:MaterialAlertDialogBuilder= MaterialAlertDialogBuilder(this,R.style.RoundShapeTheme)
-            .setView(view)
+    private fun openDialog() {
+        var dateReminder = ""
+        var timeReminder = ""
+        val view =
+            LayoutInflater.from(this@MainActivity).inflate(R.layout.add_new_task_dialog, null)
+        val dialogBuilder: MaterialAlertDialogBuilder =
+            MaterialAlertDialogBuilder(this, R.style.RoundShapeTheme)
+                .setView(view)
 
         view.setReminderChip.setOnClickListener {
-            val viewPicker = LayoutInflater.from(this).inflate(R.layout.select_date_time_dialog, null)
-            val dialogBuilder1: MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(this,R.style.RoundShapeTheme)
-                .setView(viewPicker)
-            val timePicker: TimePicker =viewPicker.findViewById(R.id.timePicker)
+            val viewPicker =
+                LayoutInflater.from(this).inflate(R.layout.select_date_time_dialog, null)
+            val dialogBuilder1: MaterialAlertDialogBuilder =
+                MaterialAlertDialogBuilder(this, R.style.RoundShapeTheme)
+                    .setView(viewPicker)
+            val timePicker: TimePicker = viewPicker.findViewById(R.id.timePicker)
             timePicker.setIs24HourView(true)
-            hour=timePicker.hour
-            minute=timePicker.minute
+            hour = timePicker.hour
+            minute = timePicker.minute
 
-            timePicker.setOnTimeChangedListener{_,_,_ ->
-                hour=timePicker.hour
-                minute=timePicker.minute
+            timePicker.setOnTimeChangedListener { _, _, _ ->
+                hour = timePicker.hour
+                minute = timePicker.minute
+
             }
 
-            val datePicker: DatePicker =viewPicker.findViewById(R.id.datePicker)
-            datePicker.minDate= Calendar.DAY_OF_MONTH.toLong()
-            date=datePicker.dayOfMonth
-            month=datePicker.month
-            year=datePicker.year
+            val datePicker: DatePicker = viewPicker.findViewById(R.id.datePicker)
+            datePicker.minDate = System.currentTimeMillis() - 1000
+            date = datePicker.dayOfMonth
+            month = datePicker.month
+            year = datePicker.year
 
-            datePicker.setOnDateChangedListener { _,_,_,_ ->
-                date=datePicker.dayOfMonth
-                month=datePicker.month
-                year=datePicker.year
+            datePicker.setOnDateChangedListener { _, _, _, _ ->
+                date = datePicker.dayOfMonth
+                month = datePicker.month
+                year = datePicker.year
+
             }
 
+            dialogBuilder1.setPositiveButton("Set Reminder") { dialog, _ ->
 
-            dialogBuilder1.setPositiveButton("Set Reminder"){dialog,_ ->
-
-                dateReminder=date.toString()+"/"+(month+1).toString()+"/"+year.toString()
-                timeReminder = if(hour<10 ) {
-                    if(minute<10)
+                dateReminder =
+                    date.toString() + "/" + (month + 1).toString() + "/" + year.toString()
+                timeReminder = if (hour < 10) {
+                    if (minute < 10)
                         "0$hour:0$minute"
                     else
                         "0$hour:$minute"
                 } else
                     "$hour:$minute"
 
-                view.setReminderChip.text= "$dateReminder  $timeReminder"
+                view.setReminderChip.text = "$dateReminder  $timeReminder"
+                view.setReminderChip.tag = "set"
                 dialog.dismiss()
+
             }
 
             dialogBuilder1.create()
             dialogBuilder1.show()
         }
 
-            dialogBuilder.setPositiveButton(getString(R.string.add)) { dialog, _: Int ->
+        dialogBuilder.setPositiveButton(getString(R.string.add)) { dialog, _: Int ->
 
-                if(view.textFieldNewTask.text.toString().isEmpty())
-                {
-                    Toast.makeText(this,"Your task can't be Empty, Please try again",Toast.LENGTH_LONG).show()
-                }
-                else{
-                val taskEntity=TaskEntity(view.textFieldNewTask.text.toString(),dateReminder,timeReminder,false,0)
-                val result= DBAsyncTask(this, taskEntity, 2).execute().get()
-                if(result)
-                {
-                    scheduleNotification(year,month,date,hour,minute,view.textFieldNewTask.text.toString())
+            if (view.textFieldNewTask.text.toString().isEmpty()) {
+                Toast.makeText(this, "Your task can't be Empty, Please try again", Toast.LENGTH_LONG).show()
+            }else {
+                val idReminder = (Date().time / 1000L % Int.MAX_VALUE).toInt()
+                val taskEntity = TaskEntity(view.textFieldNewTask.text.toString(), dateReminder, timeReminder, false, 0, idReminder)
+                val result = DBAsyncTask(this, taskEntity, 2).execute().get()
+                if (result) {
+                    if (view.setReminderChip.tag == "set") {
+                        scheduleNotification(
+                            year,
+                            month,
+                            date,
+                            hour,
+                            minute,
+                            view.textFieldNewTask.text.toString(),
+                            idReminder
+                        )
+                    }
                     taskAdapter.notifyDataSetChanged()
                     dialog.dismiss()
                     init()
+                    notText = view.textFieldNewTask.text.toString()
+
+                } else {
+                    Toast.makeText(this, "Error while adding your task", Toast.LENGTH_LONG).show()
                 }
-                else
-                {
-                    Toast.makeText(this,"Error while adding your task",Toast.LENGTH_LONG).show()
-                }}
-                taskAdapter.notifyDataSetChanged()
             }
-            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
-                dialog.dismiss()
-            }
-        dialogBuilder.create()
-        dialogBuilder.show()
+        }
+        taskAdapter.notifyDataSetChanged()
+
+    dialogBuilder.setNegativeButton(getString(R.string.cancel)) { dialog, _->
+
+        dialog.dismiss()
     }
+    dialogBuilder.create()
+    dialogBuilder.show()
+}
 
-    private fun scheduleNotification(
-        yearS: Int,
-        monthS: Int,
-        dateS: Int,
-        hourS: Int,
-        minuteS: Int,
-        text: String
-    ) {
-
+     fun scheduleNotification(
+         yearS: Int,
+         monthS: Int,
+         dateS: Int,
+         hourS: Int,
+         minuteS: Int,
+         text: String,
+         id: Int
+     )
+     {
         val calendar:Calendar= Calendar.getInstance()
-        calendar.timeInMillis = System.currentTimeMillis();
-        calendar.clear();
-        calendar.set(yearS,monthS,dateS,hourS,minuteS);
+        calendar.timeInMillis = System.currentTimeMillis()
+        calendar.clear()
+        calendar.set(yearS,monthS,dateS,hourS,minuteS,0)
 
-        val intent =Intent(this,NotificationBroadcastReceiver::class.java)
+        val intent =Intent(applicationContext,NotificationBroadcastReceiver::class.java)
             intent.putExtra("content",text)
+            intent.putExtra("id",id)
+         val pendingIntent=PendingIntent.getBroadcast(applicationContext,id,intent,PendingIntent.FLAG_UPDATE_CURRENT)
+         val alarmManager= applicationContext.getSystemService(ALARM_SERVICE) as AlarmManager
+         alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+     }
 
-        val pendingIntent=PendingIntent.getBroadcast(this,0,intent,PendingIntent.FLAG_UPDATE_CURRENT)
 
-        val alarmManager= getSystemService(ALARM_SERVICE) as AlarmManager
-        alarmManager.set(AlarmManager.RTC_WAKEUP,calendar.timeInMillis,pendingIntent)
+    fun cancelNotification(id:Int, text:String)
+    {
+        val intent =Intent(applicationContext,NotificationBroadcastReceiver::class.java)
+        intent.putExtra("content",text)
+        intent.putExtra("id",id)
+        val pendingIntent=PendingIntent.getBroadcast(applicationContext,id,intent,PendingIntent.FLAG_UPDATE_CURRENT)
+        val alarmManager= applicationContext.getSystemService(ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(pendingIntent)
+
     }
+
 
 
     class RetrieveTasks(private val context: Context) : AsyncTask<Void, Void, List<TaskEntity>>() {
         override fun doInBackground(vararg params: Void?): List<TaskEntity> {
-            val db = Room.databaseBuilder(context, TaskDatabase::class.java, "todo_tasks-db").build()
+            val db = Room.databaseBuilder(context, TaskDatabase::class.java, "todo_tasks_12-db").build()
 
             return db.taskDao().getAllTasks()
         }
@@ -262,17 +294,26 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
               return false
             }
 
+
+            @RequiresApi(Build.VERSION_CODES.O)
             override fun onSwiped(viewHolder: ViewHolder, direction: Int) {
-                val taskEntity=viewHolder.itemView.tag
+                val taskEntity:TaskEntity=viewHolder.itemView.tag as TaskEntity
+                val id=taskEntity.alarmId
+                val content=taskEntity.taskContent
+                val dateFromDb=taskEntity.date
+                val timeFromDb=taskEntity.timeReminder
 
-                val result = DBAsyncTask(applicationContext, taskEntity as TaskEntity, 3).execute().get()
-                if (result) {
+                val result = DBAsyncTask(applicationContext, taskEntity, 3).execute().get()
 
-                    Toast.makeText(applicationContext, "Task Deleted ", Toast.LENGTH_SHORT).show()
-                    init()
+                if (result){
+                    if(dateFromDb!="" && timeFromDb!="")
+                    {
+                        cancelNotification(id,content)
+                    }
+                        init()
 
-                } else {
-                    Toast.makeText(applicationContext, "Some error occurred", Toast.LENGTH_SHORT).show()
+                }else{
+                        Toast.makeText(applicationContext, "Some error occurred", Toast.LENGTH_SHORT).show()
                 }
 
 
@@ -320,8 +361,16 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
                      var counterDelete=0
                     for(items:TaskEntity in selectedItemsList)
                   {
+                      val id=items.alarmId
+                      val content=items.taskContent
+                      val dateFromDb=items.date
+                      val timeFromDb=items.timeReminder
                    if(DBAsyncTask(applicationContext,items,3).execute().get())
                        counterDelete++
+                      if(dateFromDb!="" && timeFromDb!="")
+                      {
+                          cancelNotification(id,content)
+                      }
                   }
                     if(counterDelete==selectedItemsList.size)
                     {
@@ -384,7 +433,6 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
             counter--
             updateCounter(counter)
         }
-
     }
 
     private fun updateCounter(count:Int)
@@ -392,11 +440,22 @@ class MainActivity : AppCompatActivity(), View.OnLongClickListener {
         if(count==0)
         {
             actionMode.title="O Item Selected"
-        }
-        else
+        } else
         {
             actionMode.title="$count Items Selected"
         }
     }
+
+    private fun createNotificationChannel()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannel=NotificationChannel("notifyTask","hell", NotificationManager.IMPORTANCE_HIGH)
+            notificationChannel.description=notText
+
+            val notificationManager=getSystemService(NotificationManager::class.java)
+                notificationManager?.createNotificationChannel(notificationChannel)
+        }
+    }
+
 
 }

@@ -10,5 +10,6 @@ data class TaskEntity(
     @ColumnInfo(name="date") var date:String,
     @ColumnInfo(name="time") var timeReminder:String,
     @ColumnInfo(name= "checked") var isCompleted : Boolean,
-    @PrimaryKey(autoGenerate = true) var taskId:Int
+    @PrimaryKey(autoGenerate = true) var taskId:Int,
+    @ColumnInfo(name="idForReminder") val alarmId:Int
 )

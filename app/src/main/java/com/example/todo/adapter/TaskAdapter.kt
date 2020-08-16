@@ -73,6 +73,7 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
     override fun onBindViewHolder(holder: ViewHolderTask, position: Int) {
         val taskItemObject=filteredTaskList[filteredTaskList.size-position-1]
         val id=taskItemObject.taskId
+        val reminderId=taskItemObject.alarmId
 
         reminderDate=""
         reminderTime=""
@@ -102,9 +103,10 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
                     holder.dateAndTime.text = "Set Reminder"
                 else
                     holder.dateAndTime.text = "Task Completed"
+        } else {
+
+            holder.dateAndTime.text = taskItemObject.date + " " + taskItemObject.timeReminder
         }
-        else
-            holder.dateAndTime.text=taskItemObject.date+" "+taskItemObject.timeReminder
 
         holder.llContent.setOnLongClickListener(mainActivity)
 
@@ -123,16 +125,11 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
             val view = LayoutInflater.from(context).inflate(layout.add_new_task_dialog, null)
 
-                if(taskItemObject.date=="" && taskItemObject.timeReminder=="")
+                if(holder.llContent.dateAndTime.text=="Set Reminder")
                 {
                     view.setReminderChip.text="Set Reminder"
                 }
                 else {
-
-                    if(reminderDate=="" && reminderTime=="")
-                    view.setReminderChip.text="Set Reminder"
-
-                    else
                     view.setReminderChip.text = taskItemObject.date + " " + taskItemObject.timeReminder
                 }
             view.setReminderChip.setOnClickListener {
@@ -142,9 +139,10 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
                     .setView(viewPicker)
                 val timePicker:TimePicker=viewPicker.findViewById(R.id.timePicker)
                 timePicker.setIs24HourView(true)
+
                 hour=timePicker.hour
                 minute=timePicker.minute
-
+                val calendar=Calendar.getInstance()
                 timePicker.setOnTimeChangedListener{_,_,_ ->
                     hour=timePicker.hour
                     minute=timePicker.minute
@@ -152,7 +150,7 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
 
                 val datePicker:DatePicker=viewPicker.findViewById(R.id.datePicker)
-                datePicker.minDate= Calendar.DAY_OF_MONTH.toLong()
+                datePicker.minDate= System.currentTimeMillis()-1000
                 date=datePicker.dayOfMonth
                 month=datePicker.month
                 year=datePicker.year
@@ -163,15 +161,21 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
                     year=datePicker.year
                 }
 
-
                 dialogBuilder1.setPositiveButton("Set Reminder"){dialog,_ ->
 
                         reminderDate = date.toString() + "/" + (month + 1).toString() + "/" + year.toString()
-                        reminderTime = "$hour:$minute"
+                        reminderTime = if (hour < 10) {
+                            if (minute < 10)
+                                "0$hour:0$minute"
+                            else
+                                "0$hour:$minute"
+                        } else
+                            "$hour:$minute"
                         view.setReminderChip.text = "$reminderDate  $reminderTime"
-
+                        view.setReminderChip.tag="set"
 
                     dialog.dismiss()
+
                 }
                 dialogBuilder1.create()
                 dialogBuilder1.show()
@@ -188,10 +192,22 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
                         Toast.makeText(context,"Your task can't be Empty, Please try again",Toast.LENGTH_LONG).show()
                     }
                     else{
-                    val taskEntity=TaskEntity(view.textFieldNewTask.text.toString(),reminderDate,reminderTime,taskItemObject.isCompleted,id)
+                    val taskEntity=TaskEntity(view.textFieldNewTask.text.toString(),reminderDate,reminderTime,taskItemObject.isCompleted,id,reminderId)
                     val result = DBAsyncTask(context, taskEntity, 4).execute().get()
                     if(result) {
 
+                        if (view.setReminderChip.tag == "set") {
+                            mainActivity.cancelNotification(reminderId,view.textFieldNewTask.text.toString())
+                            mainActivity.scheduleNotification(
+                                year,
+                                month,
+                                date,
+                                hour,
+                                minute,
+                                view.textFieldNewTask.text.toString(),
+                                reminderId
+                            )
+                        }
                         listener.onUpdate(taskItemObject.taskId)
                         reminderDate=""
                         reminderTime=""
@@ -207,16 +223,17 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
 
         }
 
-        holder.itemView.tag=TaskEntity(taskItemObject.taskContent,taskItemObject.date,taskItemObject.timeReminder,taskItemObject.isCompleted,id)
+        holder.itemView.tag=TaskEntity(taskItemObject.taskContent,taskItemObject.date,taskItemObject.timeReminder,taskItemObject.isCompleted,id,reminderId)
 
 
         holder.llContent.checkboxComplete.setOnClickListener {
 
+            mainActivity.cancelNotification(reminderId,taskItemObject.taskContent)
             reminderTime=""
             reminderDate=""
             if (holder.llContent.checkboxComplete.isChecked) {
 
-                val taskEntity = TaskEntity(taskItemObject.taskContent, "","", true, id)
+                val taskEntity = TaskEntity(taskItemObject.taskContent, "","", true, id,reminderId)
                 if (DBAsyncTask(context, taskEntity, 4).execute().get()) {
                     val spannableString = SpannableString(taskItemObject.taskContent)
                     spannableString.setSpan(StrikethroughSpan(), 0, spannableString.length, 0)
@@ -224,12 +241,10 @@ class TaskAdapter(private val context: Context, val taskContentList:ArrayList<Ta
                     holder.dateAndTime.text="Task completed"
                     holder.llContent.isEnabled=false
                     holder.llContent.setCardBackgroundColor(Color.GRAY)
-
-
                 }
             } else {
 
-                val taskEntity = TaskEntity(taskItemObject.taskContent, reminderDate,reminderTime, false, id)
+                val taskEntity = TaskEntity(taskItemObject.taskContent, reminderDate,reminderTime, false, id,reminderId)
                  if (DBAsyncTask(context, taskEntity, 4).execute().get())
                     holder.textTask.text = taskItemObject.taskContent
                     holder.dateAndTime.text="Set Reminder"

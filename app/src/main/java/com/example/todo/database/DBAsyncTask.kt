@@ -4,9 +4,9 @@ import android.content.Context
 import android.os.AsyncTask
 import androidx.room.Room
 
-class DBAsyncTask(private val context: Context, private val taskEntity: TaskEntity, private val mode: Int) : AsyncTask<Void, Void, Boolean>() {
+class DBAsyncTask(context: Context, private val taskEntity: TaskEntity, private val mode: Int) : AsyncTask<Void, Void, Boolean>() {
 
-    private val db= Room.databaseBuilder(context, TaskDatabase::class.java, "todo_tasks-db").build()
+    private val db= Room.databaseBuilder(context, TaskDatabase::class.java, "todo_tasks_12-db").build()
     override fun doInBackground(vararg p0: Void?): Boolean {
 
         return when (mode) {
